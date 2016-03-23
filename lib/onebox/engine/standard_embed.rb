@@ -14,10 +14,6 @@ module Onebox
         oembed_providers[regexp] = endpoint
       end
 
-      def self.add_opengraph_provider(regexp)
-        opengraph_providers.push(regexp)
-      end
-
       # Some oembed providers (like meetup.com) don't provide links to themselves
       add_oembed_provider /www\.flickr\.com\//, 'http://www.flickr.com/services/oembed.json'
       add_oembed_provider /(.*\.)?gfycat\.com\//, 'http://gfycat.com/cajax/oembed'
@@ -25,9 +21,6 @@ module Onebox
       add_oembed_provider /www\.meetup\.com\//, 'http://api.meetup.com/oembed'
       add_oembed_provider /www\.ted\.com\//, 'http://www.ted.com/services/v1/oembed.json'
       add_oembed_provider /(.*\.)?vimeo\.com\//, 'http://vimeo.com/api/oembed.json'
-
-      # Sites that work better with OpenGraph
-      add_opengraph_provider /nytimes\.com\//
 
       def always_https?
         WhitelistedGenericOnebox.host_matches(uri, WhitelistedGenericOnebox.https_hosts)
@@ -53,18 +46,7 @@ module Onebox
           end
         end
 
-        # Determine if we should use oEmbed or OpenGraph (prefers oEmbed)
-        oembed_alternate = html_doc.at("//link[@type='application/json+oembed']") || html_doc.at("//link[@type='text/json+oembed']")
-        # Do not use oEmbed for WordPress sites (https://meta.discourse.org/t/onebox-for-wordpress-4-4-sites/36765)
-        fetch_oembed_raw(oembed_alternate) unless oembed_alternate.nil? || oembed_alternate['href'] =~ /public-api.wordpress.com\/oembed/ || oembed_alternate['href'] =~ /wp-json\/oembed/
-
-        open_graph = parse_open_graph(html_doc, url)
-        if @raw
-          @raw[:image] = open_graph.images.first if @raw[:image].nil? && open_graph && open_graph.images
-          return @raw
-        end
-
-        @raw = open_graph
+        @raw = parse_open_graph(html_doc, url)
       end
 
       private
